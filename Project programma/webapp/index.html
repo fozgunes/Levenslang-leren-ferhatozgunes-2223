@@ -1,0 +1,511 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <title>Network Automation</title>
+    <meta charset="utf-8">
+    <link rel="stylesheet" href="css/styles.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto&display=swap" rel="stylesheet">
+</head>
+
+<body>
+    <h1>Network Automation</h1>
+    <h2>Configure Device</h2>
+    <form action="/configure" method="post">
+        <select name="device">
+            List of all switches (Name, firmware, version):
+            <option value="{{ device.name }}">DEVICE NAME:</option>
+        </select>
+        <input type="text" name="command" placeholder="Enter command">
+        <button type="submit" value="Execute">Execute</button>
+    </form>
+    <br> Cisco 17.06.03 01012023
+    <br>
+    <h3>Command Output for {{ device.name }}:</h3>
+    <br>
+    <img src="/Project programma/webapp/img/configexample.PNG" alt="">
+    conf t
+    hostname lv-fa1f5-as01
+    !
+    ip domain name imec.be
+    ip name-server 10.48.0.100 10.48.0.101 10.48.0.102
+    ip domain lookup
+    ip domain lookup source-interface vlan 142
+    !
+    ntp server 10.48.1.1
+    clock timezone CET 1 0
+    clock summer-time CEST recurring last Sun Mar 2:00 last Sun Oct 3:00
+    !
+    ip routing
+    !
+    banner motd ^CC
+    *********************************************************
+    * [WARNING] *
+    * This system is owned by IMEC. If you are not *
+    * authorized to access this system, exit immediately. *
+    * Unauthorized access to this system is forbidden by *
+    * company policies, national, and international laws. *
+    * Unauthorized users are subject to criminal and civil *
+    * penalties as well as company initiated disciplinary *
+    * proceedings. *
+    * *
+    * By entry into this system you acknowledge that you *
+    * are authorized access and the level of privilege you *
+    * subsequently execute on this system. You further *
+    * acknowledge that by entry into this system you *
+    * expect no privacy from monitoring. *
+    *********************************************************
+    ^C
+    !
+    no ip http server
+    no ip http secure-server
+    no ip source-route
+    service password-encryption
+    service tcp-keepalives-in
+    service tcp-keepalives-out
+    no ip bootp server
+    no service dhcp
+    !
+    license boot level network-advantage addon dna-advantage
+    !
+    crypto key generate rsa modulus 2048
+    ip ssh version 2
+    ip ssh time-out 60
+    ip ssh authentication-retries 3
+    !
+    interface Vlan1
+    no ip address
+    shutdown
+    !
+    archive
+    log config
+    logging enable
+    notify syslog contenttype plaintext
+    hidekeys
+    path scp://netadmin:tftp1014@config-archive/backups/switches/$h
+    write-memory
+    !
+    spanning-tree mode rapid-pvst
+    spanning-tree portfast bpduguard default
+    spanning-tree extend system-id
+    !
+    vtp mode off
+    !
+    username ciscoadmin privilege 15 secret 8 $8$g6BOJkGKgTpoOE$wGpCgSUktlLh0z31jiqip9spgBtPQKD4Txh21yy4gd.
+    !
+    aaa new-model
+    !
+    radius server ISE03
+    address ipv4 10.48.69.13 auth-port 1645 acct-port 1646
+    key Key4IMEC$%
+    radius server ISE04
+    address ipv4 10.48.69.14 auth-port 1645 acct-port 1646
+    key Key4IMEC$%
+    !
+    radius-server dead-criteria time 10 tries 3
+    !
+    aaa group server radius ISE
+    server name ISE03
+    server name ISE04
+    ip radius source-interface Vlan142
+    !
+    aaa authentication fail-message ^
+    *** WARNING: wrong login - Maximum 3 attempts ***^
+    aaa authentication login default group ISE local
+    aaa authentication login localauth local
+    aaa authentication dot1x default group ISE
+    aaa authorization console
+    aaa authorization config-commands
+    aaa authorization exec default local group ISE if-authenticated
+    aaa authorization network default group ISE
+    aaa accounting session-duration ntp-adjusted
+    aaa accounting nested
+    aaa accounting dot1x default start-stop group ISE
+    aaa accounting exec default start-stop group ISE
+    aaa accounting commands 15 default start-stop group ISE
+    aaa accounting connection default start-stop group ISE
+    aaa accounting exec default start-stop group ISE
+    aaa accounting network default start-stop group ISE
+    aaa accounting system default start-stop group ISE
+    aaa session-id common
+    !
+    radius-server attribute 6 on-for-login-auth
+    radius-server attribute 6 support-multiple
+    radius-server attribute 8 include-in-access-req
+    radius-server attribute 25 access-request include
+    radius-server attribute nas-port format d
+    radius-server attribute list custom
+    attribute 87
+    !
+    interface Vlan142
+    description *** Network Management ***
+    ip address 10.14.2.34 255.255.254.0
+    no ip redirects
+    no ip unreachables
+    no ip proxy-arp
+    ip route 0.0.0.0 0.0.0.0 10.14.2.1
+    !ip default-gateway 10.14.2.1
+    !
+    line con 0
+    session-timeout 5
+    exec-timeout 10
+    login authentication localauth
+    logging synchronous
+    stopbits 1
+    line vty 0 31
+    session-timeout 5
+    exec-timeout 10
+    logging synchronous
+    transport input ssh
+    !
+    logging host 10.46.0.82
+    logging host 10.48.1.214
+    logging console critical
+    logging buffered 64000
+    !
+    mac address-table notification mac-move
+    !
+    snmp-server community mialaz& RO
+    snmp-server community tadaiz$ RW
+    snmp-server location ToBeCompletedAfterInstallation
+    snmp-server contact ICTINFRA - NET3
+    snmp-server enable traps snmp authentication linkdown linkup coldstart warmstart
+    snmp-server enable traps envmon fan shutdown supply temperature status
+    snmp-server enable traps transceiver all
+    snmp-server enable traps port-security
+    snmp-server enable traps errdisable
+    !snmp-server host 10.14.2.34 mialaz&
+    snmp-server host 10.48.1.214 mialaz&
+    snmp-server host 10.46.0.46 mialaz&
+    !
+    ip dhcp snooping vlan 1-4094
+    ip dhcp snooping
+    no ip dhcp snooping information option
+    device-tracking binding reachable-lifetime infinite stale-lifetime infinite down-lifetime infinite
+    no device-tracking logging theft
+    !
+    device-tracking policy UPLINK
+    device-role switch
+    trusted-port
+    !
+    login block-for 120 attempts 3 within 60
+    login on-failure log
+    login on-success log
+    !
+    errdisable recovery cause storm-control
+    errdisable recovery cause psecure-violation
+    !
+    vlan 64
+    name office
+    vlan 65
+    name peripherals
+    vlan 67
+    name office_test
+    vlan 80
+    name labo
+    vlan 81
+    name labo3
+    vlan 82
+    name labo2
+    vlan 86
+    name nerf
+    vlan 87
+    name biolabs
+    vlan 89
+    name rf-lab
+    vlan 90
+    name amsimec
+    vlan 92
+    name ict-testdomain
+    vlan 93
+    name imec-extranet
+    vlan 95
+    name quarantine
+    vlan 113
+    name honeywell
+    !vlan 114
+    !name warehouse
+    vlan 130
+    name ThinClient
+    vlan 142
+    name Networkmanagement
+    vlan 146
+    name capwap
+    vlan 148
+    name apvlan
+    !vlan 192
+    ! name testdomain
+    vlan 195
+    name avcontrol
+    vlan 222
+    name control-systems
+    vlan 401
+    name amsimec-waferstorage
+    vlan 402
+    name amsimec-esd
+    vlan 403
+    name amsimec-cryo
+    vlan 404
+    name amsimec-parametric
+    vlan 405
+    name amsimec-componenttest
+    vlan 406
+    name amsimec-waferevaluation
+    vlan 407
+    name amsimec-oio
+    vlan 408
+    name amsimec-memorylab
+    vlan 409
+    name amsimec-rf-hv-power
+    vlan 410
+    name amsimec-wafertest
+    vlan 411
+    name amsimec-fab1
+    vlan 412
+    name amsimec-fab2
+    vlan 651
+    name LyncPhone
+    !vlan 652
+    !name CiscoSpark
+    vlan 891
+    name exascience-office
+    vlan 955
+    name digsignage
+    vlan 961
+    name FainElec
+    vlan 965
+    name asm-office
+    !vlan 966
+    !name lam-office
+    !vlan 970
+    !name DMZB-PA
+    !vlan 978
+    !name MyDiagnostic
+    !vlan 980
+    ! name wlctrl-HA
+    !vlan 983
+    !name Panasonic-Data
+    !vlan 984
+    !name panasonic
+    !vlan 988
+    !name LWAP
+    vlan 993
+    name Public
+    !
+    no ip access-list extended VOICE
+    ip access-list extended VOICE
+    remark == MS Teams voice 46 (EF) ==
+    permit tcp any range 50000 50019 any
+    permit udp any range 50000 50019 any
+    permit tcp any any range 50000 50019
+    permit udp any any range 50000 50019
+    !
+    remark == CAPWAP ==
+    permit udp any any range 5246 5247
+    !
+    no ip access-list extended VIDEO
+    ip access-list extended VIDEO
+    remark == MS Teams video 34 (AF41) ==
+    permit tcp any range 50020 50039 any
+    permit udp any range 50020 50039 any
+    permit tcp any any range 50020 50039
+    permit udp any any range 50020 50039
+    !
+    remark == CAPWAP ==
+    permit udp any any range 5246 5247
+    !
+    no ip access-list extended APPLICATION-SHARING
+    ip access-list extended APPLICATION-SHARING
+    remark == MS Teams application sharing 26 (AF31) ==
+    permit tcp any range 50040 50059 any
+    permit udp any range 50040 50059 any
+    permit tcp any any range 50040 50059
+    permit udp any any range 50040 50059
+    !
+    remark == CAPWAP ==
+    permit udp any any range 5246 5247
+    !
+    no ip access-list extended SIGNALING
+    ip access-list extended SIGNALING
+    remark == SIP signaling 24 (CS3) ==
+    permit tcp any any range 5060 5061
+    permit udp any any range 5060 5061
+    permit tcp any range 5060 5061 any
+    permit udp any range 5060 5061 any
+    !
+    remark == MS Teams signaling (Transport relay) ==
+    permit udp any any eq 3478
+    permit udp any eq 3478 any
+    !
+    remark == CAPWAP ==
+    permit udp any any range 5246 5247
+    !
+    no ip access-list extended TRANSACTIONAL-DATA
+    ip access-list extended TRANSACTIONAL-DATA
+    !
+    no ip access-list extended SCAVENGER
+    ip access-list extended SCAVENGER
+    ! ** empty **
+    !
+    class-map match-all VOICE
+    match access-group name VOICE
+    match dscp ef !(DSCP 46)
+    !
+    class-map match-all VIDEO
+    match access-group name VIDEO
+    match dscp af41 !(DSCP 34)
+    !
+    class-map match-all APPLICATION-SHARING
+    match access-group name APPLICATION-SHARING
+    match dscp af31 !(DSCP 26)
+    !
+    class-map match-all SIGNALING
+    match access-group name SIGNALING
+    match dscp cs3 !(DSCP 24)
+    !
+    class-map match-all TRANSACTIONAL-DATA
+    match access-group name TRANSACTIONAL-DATA
+    !
+    class-map match-all SCAVENGER
+    match access-group name SCAVENGER
+    !
+    policy-map QoS-INGRESS
+    class VOICE
+    set dscp ef
+    police cir 25000000 conform-action transmit exceed-action drop
+    class VIDEO
+    set dscp af41
+    police cir 100000000 conform-action transmit exceed-action drop
+    class APPLICATION-SHARING
+    set dscp af31
+    police cir 100000000 conform-action transmit exceed-action drop
+    class SIGNALING
+    set dscp cs3
+    class TRANSACTIONAL-DATA
+    set dscp af21
+    class SCAVENGER
+    set dscp cs1
+    class class-default
+    set dscp default
+    !
+    class-map match-any PREMIUM-PQ
+    match dscp ef
+    match dscp cs6
+    match dscp cs7
+    !
+    ! ### Queue 2 ###
+    class-map match-any BUSINESS-1-QUEUE
+    match dscp af41
+    match dscp af31
+    !
+    ! ### Queue 3 ###
+    class-map match-any BUSINESS-2-QUEUE
+    match dscp cs3
+    match dscp af21
+    !
+    policy-map QoS-EGRESS
+    class PREMIUM-PQ
+    priority level 1
+    police rate percent 10
+    queue-buffers ratio 15
+    !
+    class BUSINESS-1-QUEUE
+    bandwidth remaining percent 40
+    queue-buffers ratio 25
+    queue-limit dscp af31 percent 80
+    !
+    class BUSINESS-2-QUEUE
+    bandwidth remaining percent 35
+    queue-buffers ratio 25
+    queue-limit dscp af21 percent 80
+    !
+    class class-default
+    bandwidth remaining percent 10
+    queue-buffers ratio 35
+    queue-limit dscp cs1 percent 60
+    !
+    macro name mab
+    description Access - MAB
+    switchport mode access
+    switchport nonegotiate
+    switchport port-security maximum 2
+    switchport port-security
+    authentication control-direction in
+    authentication event no-response action authorize vlan 993
+    authentication host-mode multi-host
+    authentication port-control auto
+    mab
+    storm-control broadcast level 5.00
+    storm-control multicast level 5.00
+    storm-control action shutdown
+    spanning-tree portfast
+    ip dhcp snooping limit rate 20
+    service-policy input QoS-INGRESS
+    @
+    macro name no-mab
+    description Access - Static
+    switchport mode access
+    switchport access vlan 1
+    switchport nonegotiate
+    switchport port-security maximum 2
+    switchport port-security
+    storm-control broadcast level 5.00
+    storm-control multicast level 5.00
+    storm-control action shutdown
+    spanning-tree portfast
+    ip dhcp snooping limit rate 20
+    service-policy input QoS-INGRESS
+    @
+    !
+    interface TwentyFiveGigE1/1/1
+    description
+    switchport mode trunk
+    channel-group 1 mode active
+    logging event link-status
+    logging event trunk-status
+    ! service-policy input QoS-INGRESS
+    service-policy output QoS-EGRESS
+    !
+    interface TwentyFiveGigE2/1/1
+    description
+    switchport mode trunk
+    channel-group 1 mode active
+    logging event link-status
+    logging event trunk-status
+    ! service-policy input QoS-INGRESS
+    service-policy output QoS-EGRESS
+    !
+    interface Port-channel1
+    description
+    switchport trunk pruning vlan none
+    switchport mode trunk
+    ip dhcp snooping trust
+    device-tracking attach-policy UPLINK
+    !
+    # MAB ports - with macro
+    int range gi1/0/1-48
+    macro apply mab
+    !
+    int range gi2/0/1-48
+    macro apply mab
+    !
+    int range gi3/0/1-48
+    macro apply mab
+    !
+    int range gi4/0/1-48
+    macro apply mab
+    !
+    int range gi5/0/1-48
+    macro apply mab
+    !
+    crypto pki trustpoint SLA-TrustPoint
+    revocation-check none
+    exit
+    exit
+    write
+
+</body>
+
+</html>
